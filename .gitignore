@@ -1,0 +1,70 @@
+# ===============================
+# Android / Gradle
+# ===============================
+
+.gradle/
+build/
+*/build/
+
+# Local SDK config
+local.properties
+
+# ===============================
+# Android Studio
+# ===============================
+
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+
+# ===============================
+# OS files
+# ===============================
+
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+
+# ===============================
+# Logs
+# ===============================
+
+*.log
+
+# ===============================
+# Generated files
+# ===============================
+
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ===============================
+# NDK
+# ===============================
+
+obj/
+.libs/
+
+# ===============================
+# Keystore (VERY IMPORTANT)
+# ===============================
+
+*.jks
+*.keystore
+
+# ===============================
+# Misc
+# ===============================
+
+out/
+tmp/
