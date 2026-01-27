@@ -30,19 +30,31 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # Build a DEBUG apk (always works, no signing config needed)
+      # Build DEBUG + RELEASE APKs
       - name: Build Debug APK
         run: ./gradlew :app:assembleDebug
 
-      - name: Upload APK (workflow artifact)
+      - name: Build Release APK
+        run: ./gradlew :app:assembleRelease
+
+      # Upload workflow artifacts (always)
+      - name: Upload Debug APK (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
-      # If this run was triggered by a tag (v*), publish it to GitHub Releases
+      - name: Upload Release APK (workflow artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: |
+            app/build/outputs/apk/release/*.apk
+
+      # If triggered by a tag (v*), publish RELEASE apk to GitHub Releases
       - name: Release APK to GitHub Releases
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/debug/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
