@@ -2,7 +2,7 @@ name: Build APK + Release Artifact
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     tags:
       - "v*"
   workflow_dispatch:
@@ -13,7 +13,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,7 +20,7 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
+          distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle (cache)
@@ -30,31 +29,34 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # Build DEBUG + RELEASE APKs
-      - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug
-
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease
-
-      # Upload workflow artifacts (always)
-      - name: Upload Debug APK (workflow artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload Release APK (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: |
-            app/build/outputs/apk/release/*.apk
+          path: app/build/outputs/apk/release/*.apk
 
-      # If triggered by a tag (v*), publish RELEASE apk to GitHub Releases
-      - name: Release APK to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Release APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: dist
+
+      - name: Zip APK(s)
+        run: |
+          ls -la dist
+          zip -j app-release-apk.zip dist/*.apk
+
+      - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            app/build/outputs/apk/release/*.apk
+            dist/*.apk
+            app-release-apk.zip
