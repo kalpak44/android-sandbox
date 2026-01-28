@@ -1,4 +1,4 @@
-name: Build APK + Release Artifact
+name: Build APK + Release
 
 on:
   push:
@@ -6,6 +6,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional tag to publish a GitHub Release (e.g. v1.2.3). Leave empty to only build artifacts."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -13,9 +18,18 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug refs
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "ref_name=${{ github.ref_name }}"
+          echo "ref_type=${{ github.ref_type }}"
+          echo "input_release_tag=${{ inputs.release_tag }}"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -29,34 +43,64 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Build Debug APK
+        run: ./gradlew :app:assembleDebug
+
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease
+
+      - name: Upload Debug APK (workflow artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
 
       - name: Upload Release APK (workflow artifact)
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Run release job if this is a v* tag push OR manual run with release_tag starting with v
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.release_tag, 'v')
+
     steps:
+      - name: Decide tag name
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Using tag: $(cat $GITHUB_OUTPUT)"
+
       - name: Download Release APK artifact
         uses: actions/download-artifact@v4
         with:
           name: app-release-apk
           path: dist
 
-      - name: Zip APK(s)
+      - name: Show downloaded files
         run: |
           ls -la dist
+          find dist -maxdepth 2 -type f -name "*.apk" -print
+
+      - name: Create zip from APK(s)
+        run: |
           zip -j app-release-apk.zip dist/*.apk
 
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
           files: |
             dist/*.apk
             app-release-apk.zip
